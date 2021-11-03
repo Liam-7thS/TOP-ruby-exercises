@@ -1,107 +1,168 @@
 module TicTacToe
-    LINES = [[1,2,3],[4,5,6],[7,8,9],[1,4,7],[2,5,8],[3,6,9],[1,5,9],[3,5,7]]
-    PLAYERS = ['X','O']
-    class Game
-      def initialize()
-        @board = Array.new(10) 
-   
-        @current_player_id = 0
-        @players = [Player.new(self, "X"), Player.new(self, "O")]
-        puts "Player #{PLAYERS[current_player_id]} goes first."
+
+  class Game
+    LINES = [[1,2,3],[4,5,6],[7,8,9],[1,4,7],[2,5,8],[3,6,9],[1,5,9],[3,5,9]]
+    attr_accessor :board, :players, :current_player_id
+    def initialize(player1_marker='X',player2_marker='O')
+
+      @current_player_id = 0
+      @board = Board.new()
+      @players = [Player.new(player1_marker),Player.new(player2_marker)]
+      play()
+
+    end
+
+    def play()
+      puts "welcome to David's Tic Tac Toe!\nThis is a two player game\nPlayer #{current_player.marker} moves first, good luck!\n"
+      @board.print_board
+      loop do
+        return puts "It's a draw!" unless @board.any_free_cells?
+        play_round
+        @board.print_board
+        break if has_won?(current_player)
+        shift_current_player
       end
-      attr_reader :board, :current_player_id
-   
-      def play
-        loop do
-          place_player_marker(current_player)
-   
-          if player_has_won?(current_player)
-            puts "Player #{PLAYERS[@current_player_id]} wins!"
-            print_board
-            return
-          elsif board_full?
-            puts "It's a draw."
-            print_board
-            return
+      puts "player #{current_player.marker} wins!"
+    end
+
+    def play_round()
+      loop do
+        puts "Player #{current_player.marker}'s turn, please enter a cell to mark:"
+        pos = gets.to_i
+      
+        begin @board.is_cell_free?(pos)
+          rescue
+            puts "Please input a valid cell value"
+          else
+            if @board.is_cell_free?(pos)
+              pos = pos.to_i
+              @board.mark(pos,          current_player.marker)
+              current_player.mark(pos)
+              break
+            end
           end
-   
-          switch_players!
-        end
-      end
-   
-      def free_positions
-        (1..9).select {|position| @board[position].nil?}
-      end
-   
-      def place_player_marker(player)
-        position = player.select_position!
-        puts "Player #{player.marker} selects #{player.marker} position #{position}"
-        @board[position] = player.marker
-      end
-   
-      def player_has_won?(player)
-        LINES.any? do |line|
-          line.all? {|position| @board[position] == player.marker}
-        end
-      end
-   
-      def board_full?
-        free_positions.empty?
-      end
-   
-      def other_player_id
-        1 - @current_player_id
-      end
-   
-      def switch_players!
-        @current_player_id = other_player_id
-      end
-   
-      def current_player
-        @players[current_player_id]
-      end
-   
-      def opponent
-        @players[other_player_id]
-      end
-   
-      def turn_num
-        10 - free_positions.size
-      end
-   
-      def print_board
-        col_separator, row_separator = " | ", "--+---+--"
-        label_for_position = lambda{|position| @board[position] ? @board[position] : position}
-   
-        row_for_display = lambda{|row| row.map(&label_for_position).join(col_separator)}
-        row_positions = [[1,2,3], [4,5,6], [7,8,9]]
-        rows_for_display = row_positions.map(&row_for_display)
-        puts rows_for_display.join("\n" + row_separator + "\n")
+        
       end
     end
-   
-    class Player
-      def initialize(game, marker)
-        @game = game
-        @marker = marker
+
+  
+
+    def has_won?(player)
+      win = false
+      for i in LINES
+
+        for j in 0..2
+
+          win = player.cells.include?(i[j])
+          break if !win
+        end
+        break if win
       end
-      attr_reader :marker
-      def select_position!
-        @game.print_board
-        loop do
-          print "Player #{@marker} select your #{marker} position: "
-          selection = gets.to_i
-          return selection if @game.free_positions.include?(selection)
-          puts "Position #{selection} is not available. Try again."
+
+      win
+
+    end
+
+    def shift_current_player
+      @current_player_id = 1 - @current_player_id
+    end
+
+    def current_player
+      players[@current_player_id]
+    end
+
+    def other_player
+      players[1 - @current_player_id]
+    end
+    
+
+  end
+  class Board
+    attr_accessor :cells
+
+    def initialize
+
+      @cells = Array.new(10)
+      for i in 1..9
+        @cells[i] = Cell.new()
       end
+
+    end
+    
+    def is_value_at?(pos, cmp)
+      @cells[pos].is_value?(cmp)
+    end
+
+    def any_free_cells?
+      for i in 1..9
+        return true if is_cell_free?(i)
+      end
+      return false
+    end
+
+    def is_cell_free?(pos)
+      is_value_at?(pos, nil)
+    end
+
+    def mark(pos, marker)
+      @cells[pos].value = marker if is_cell_free?(pos)
+    end
+
+    def cell_at(pos)
+      @cells[pos].value
+    end
+
+    def print_board()
+      line = "\t--+---+--"
+      puts "\n\t#{cell_at(1)} | #{cell_at(2)} | #{cell_at(3)}"
+      puts line
+      puts "\t#{cell_at(4)} | #{cell_at(5)} | #{cell_at(6)}"
+      puts line
+      puts "\t#{cell_at(7)} | #{cell_at(8)} | #{cell_at(9)}\n"
+      puts ""
+    end
+
+  end
+
+  class Cell  
+    attr_accessor :value, :instance_id
+    @@instance_count = 0
+    
+    def initialize()
+      @@instance_count +=1
+      @instance_id = @@instance_count
       
-      end
-      def to_s
-        "Player #{marker}"
-      end
+    end
+
+    def value
+      @value == nil ? @instance_id : @value
+    end
+
+    def is_value?(cmp)
+      cmp == @value
+    end
+
   end
+
+  class Player
+    
+    attr_accessor :cells
+    attr_reader :marker
+
+    def initialize(marker)
+      @marker = marker
+      @cells = []
+    end
+
+    def mark(cell)
+      @cells.push(cell)
+    end
+
   end
-  
-  include TicTacToe
-  
-  Game.new().play
+
+end
+
+include TicTacToe
+
+play = Game.new()
+
